@@ -1,63 +1,79 @@
 import fetch, { Response } from "node-fetch";
-import { EventEmitter } from "stream";
+
+type Function = <T>(...args: any) => T | void
+type Listener = {
+  name: string,
+  fn: Function,
+  isOnce: boolean,
+}
 
 class MyEventEmitter {
-  public listener: EventEmitter
+  public listeners: Listener[] = []
 
-  constructor() {
-    this.listener = new EventEmitter()
+  addListener(eventName: string, fn: Function, isOnce?: boolean) {
+    this.listeners.push({
+      name: eventName,
+      fn,
+      isOnce: isOnce ?? false
+    })
   }
 
-  addListener<T = void>(eventName: string | symbol, fn: (...args: any) => T) {
-    this.listener.addListener(eventName, fn)
+  on(eventName: string, fn: Function) {
+    this.addListener(eventName, fn)
   }
 
-  on<T = void>(eventName: string | symbol, fn: (...args: any) => T) {
-    this.listener.on(eventName, fn)
+  removeListener(eventName: string, fn: Function) {
+    this.listeners = this.listeners.filter(listener => listener.name !== eventName || listener.fn !== fn);
   }
 
-  removeListener<T = void>(eventName: string | symbol, fn: (...args: any) => T) {
-    this.listener.removeListener(eventName, fn)
+  off(eventName: string, fn: Function) {
+    this.removeListener(eventName, fn)
   }
 
-  off<T>(eventName: string | symbol, fn: (...args: any) => T) {
-    this.listener.off(eventName, fn)
+  once(eventName: string, fn: Function) {
+    this.addListener(eventName, fn, true)
   }
 
-  once<T>(eventName: string | symbol, fn: (...args: any) => T) {
-    this.listener.once(eventName, fn)
-  }
+  emit(eventName: string, ...args: any) {
+    this.listeners.forEach(listener => {
+      if (listener.name === eventName) {
+        listener.fn(...args)
 
-  emit(eventName: string | symbol, ...args: any) {
-    this.listener.emit(eventName, ...args)
+        if (listener.isOnce)
+          this.removeListener(eventName, listener.fn)
+      }
+    })
   }
 
   listenerCount(eventName: string | symbol): number {
-    return this.listener.listenerCount(eventName)
+    return this.listeners.filter(listener => listener.name === eventName).length
   }
 
   rawListeners(eventName: string | symbol): Function[] {
-    return this.listener.rawListeners(eventName)
+    return this.listeners.filter(listener => listener.name === eventName).map(listener => listener.fn)
   }
 }
 
 class WithTime extends MyEventEmitter {
-  async execute<T>(asyncFunc: (...args: any) => Promise<any>, ...args: any): Promise<T> {
+  async execute<T>(asyncFunc: (...args: any) => Promise<any>, ...args: any): Promise<T | void> {
     this.emit('begin')
+    const startTime = new Date().getTime()
     const response = await asyncFunc(...args)
-    console.log(response)
-    this.emit('end')
-    return response
+    const endTime = new Date().getTime()
+
+    this.emit('end', endTime - startTime)
+    this.emit('executed', response)
   }
 }
 
 const withTime = new WithTime();
 
 withTime.on('begin', () => console.log('About to execute'));
-withTime.on('end', () => console.log('Done with execute'));
+withTime.on('end', (timeMS) => console.log(`Done with execute, it took ${timeMS}ms`));
 
 console.log(withTime.rawListeners("end"));
-const response = withTime.execute<Response>(fetch, 'https://jsonplaceholder.typicode.com/posts/1')
+withTime.on('executed', (response) => console.log(response))
+withTime.execute<Response>(fetch, 'https://jsonplaceholder.typicode.com/posts/1')
 
 
 const myEmitter = new MyEventEmitter();
