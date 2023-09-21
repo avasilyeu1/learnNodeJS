@@ -20,7 +20,9 @@
   },
   "homepage": "https://github.com/avasilyeu1/learnNodeJS#readme",
   "dependencies": {
+    "@types/csvtojson": "^1.1.5",
     "@types/node-fetch": "^2.6.5",
+    "csvtojson": "^2.0.10",
     "node-fetch": "^2.7.0",
     "repl": "^0.1.3"
   },

@@ -1,4 +1,6 @@
 import fetch, { Response } from "node-fetch";
+import csvtojson from "csvtojson";
+import fs from 'fs'
 
 type Function = <T>(...args: any) => T | void
 type Listener = {
@@ -123,3 +125,23 @@ myEmitter.off('eventOne', c1);
 console.log(myEmitter.listenerCount('eventOne'));
 myEmitter.off('eventOne', c2);
 console.log(myEmitter.listenerCount('eventOne'));
+
+csvtojson()
+  .fromFile(`${__dirname}/csv/nodejs-hw1-ex1.csv`)
+  .then((jsonObj) => {
+    const writableStream = fs.createWriteStream(`${__dirname}/csv//nodejs-hw1-ex2.txt`)
+    writableStream.on('error', (error) => {
+      throw error;
+    })
+
+    jsonObj.map((item: { Book: string; Author: string; Amount: string; Price: string; }) => {
+      const nextItem = {
+        book: item.Book,
+        author: item.Author,
+        price: item.Price
+      }
+
+      writableStream.write(`${JSON.stringify(nextItem)}\n`)
+    })
+    writableStream.end()
+  })
