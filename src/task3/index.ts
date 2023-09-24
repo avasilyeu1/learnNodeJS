@@ -126,22 +126,35 @@ console.log(myEmitter.listenerCount('eventOne'));
 myEmitter.off('eventOne', c2);
 console.log(myEmitter.listenerCount('eventOne'));
 
+interface CSVItemType {
+  Book: string;
+  Author: string;
+  Amount: string;
+  Price: string;
+}
+interface JSONItemType {
+  book: string;
+  author: string;
+  price: string
+}
+const writableStream = fs.createWriteStream(`${__dirname}/csv//nodejs-hw1-ex2.txt`)
+writableStream.on('error', (error) => {
+  console.log(error);
+})
+
+
 csvtojson()
   .fromFile(`${__dirname}/csv/nodejs-hw1-ex1.csv`)
-  .then((jsonObj) => {
-    const writableStream = fs.createWriteStream(`${__dirname}/csv//nodejs-hw1-ex2.txt`)
-    writableStream.on('error', (error) => {
-      throw error;
-    })
-
-    jsonObj.map((item: { Book: string; Author: string; Amount: string; Price: string; }) => {
-      const nextItem = {
-        book: item.Book,
-        author: item.Author,
-        price: item.Price
+  .subscribe((data: CSVItemType) => {
+    return new Promise((resolve) => {
+      const nextJSONValue: JSONItemType = {
+        book: data.Book,
+        author: data.Author,
+        price: data.Price
       }
-
-      writableStream.write(`${JSON.stringify(nextItem)}\n`)
+      writableStream.write(`${JSON.stringify(nextJSONValue)}\n`)
+      resolve()
     })
+  }, error => console.log(`Load error: `, error), () => {
     writableStream.end()
   })
